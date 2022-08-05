@@ -1,6 +1,7 @@
 from typing import List, TypeVar
 
-Node = TypeVar('Node', bound='Node')
+Node = TypeVar("Node", bound="Node")
+
 
 class Node:
     def __init__(self, incoming_nodes: List[Node] = []):
@@ -34,20 +35,24 @@ class Node:
 
     def compute_gradients(self, with_respect):
         path_to_target_variable = []
-        latest_grad = 1.
+        latest_grad = 1.0
+
         def _compute_grad(node: Node):
             if self.is_last_operation(node):
                 return
             path_to_target_variable.append(node)
             for n in node.outcoming_nodes:
                 _compute_grad(n)
+
         _compute_grad(with_respect)
         path_to_target_variable.append(self)
         path_to_target_variable = list(reversed(path_to_target_variable))
-        for most_recent_operation, prev_operation in zip(path_to_target_variable[:-1], path_to_target_variable[1:]):
+        for most_recent_operation, prev_operation in zip(
+            path_to_target_variable[:-1], path_to_target_variable[1:]
+        ):
             out = most_recent_operation.backward(prev_operation).data
             latest_grad *= out
         return latest_grad
-    
+
     def __repr__(self):
         return f"<{self.__class__.__name__.capitalize()} Operation>"
