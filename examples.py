@@ -1,10 +1,3 @@
-# autograd
-A simple autograd library.
-
-
-
-
-```python
 import autograd
 import jax
 
@@ -110,4 +103,3 @@ print("JAX forward result:", sigmoid(0.2))
 # argnums = 0 means with respect  to `x``.
 print("JAX backward result with respect to x:", jax.grad(sigmoid, argnums=0)(0.2))
 # output: JAX backward result with respect to x: 0.24751654
-```
