@@ -27,7 +27,12 @@ class subtract(Node):
         return self.output
 
     def backward(self, with_respect):
-        return variable.Variable(with_respect.shape)
+        x, y = self.get_incoming_nodes()
+        if with_respect is x:
+            derivative = np.ones(x.shape)
+        elif with_respect is y:
+            derivative = -np.ones(y.shape)
+        return variable.Variable(derivative)
 
 
 class multiply(Node):
@@ -46,8 +51,9 @@ class multiply(Node):
         elif with_respect is variable_2:
             derivative = variable_1.data
         else:
-            derivative = 0.
+            derivative = 0.0
         return variable.Variable(derivative)
+
 
 class dot(Node):
     def __init__(self, x, y):
@@ -65,7 +71,7 @@ class dot(Node):
         elif with_respect is variable_2:
             derivative = variable_1.data
         else:
-            derivative = 0.
+            derivative = 0.0
         return variable.Variable(derivative)
 
 
@@ -74,13 +80,13 @@ class sum(Node):
         super().__init__([x])
 
     def forward(self):
-        self.output = np.sum(self.get_incoming_nodes().data)
+        self.output = self.get_incoming_nodes().data
         return self.output
 
     def backward(self, with_respect):
         x = self.get_incoming_nodes()
         if with_respect is x:
-            derivative = np.sum(np.ones(x.shape))
+            derivative = np.ones(x.shape)
         else:
             derivative = np.zeros(x.shape)
         return variable.Variable(derivative)
@@ -146,7 +152,7 @@ class sigmoid(Node):
         return self.output
 
     def backward(self, with_respect):
-        return self.output_node.backward(with_respect)
+        return variable.Variable(self.output_node.backward(with_respect).data)
 
 
 class sin(Node):

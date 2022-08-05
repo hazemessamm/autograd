@@ -18,8 +18,8 @@ class Leaf:
 
     @property
     def shape(self):
-        if getattr(self, '_assigned', False) and not self._assigned:
-            raise ValueError('Placeholder is not initialized yet.')
+        if getattr(self, "_assigned", False) and not self._assigned:
+            raise ValueError("Placeholder is not initialized yet.")
         return self._data.shape
 
     def __repr__(self):

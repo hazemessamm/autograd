@@ -1,15 +1,22 @@
 from typing import List, TypeVar, Union
 from autograd.ops_mixin import OperationsMixin
+import numpy as np
 
 Node = TypeVar("Node", bound="Node")
 
 
 class Node(OperationsMixin):
     def __init__(self, incoming_nodes: List[Node] = []):
+        # incoming operations or variables
         self.incoming_nodes = incoming_nodes
+        # outcoming operations or variables
         self.outcoming_nodes = []
+        # if a node has nested nodes in it 
+        # then the last nested node should be stored here
         self.output_node = None
+        # for caching outputs
         self.output = None
+        # for connecting nodes
         self._attach_to_outcoming_nodes()
 
     @property
@@ -23,9 +30,13 @@ class Node(OperationsMixin):
         return self.data.shape
 
     def get_incoming_nodes(self) -> Union[List[Node], Node]:
+        '''Returns incoming nodes and also checks 
+        if an incoming node has nested nodes 
+        so it can return the last nested node'''
+
         if len(self.incoming_nodes) > 1:
-            return self.incoming_nodes        
-        
+            return self.incoming_nodes
+
         incoming_node = self.incoming_nodes[0]
         if len(self.incoming_nodes) == 1:
             if incoming_node.output_node is not None:
@@ -38,7 +49,7 @@ class Node(OperationsMixin):
     def _attach_to_outcoming_nodes(self):
         for node in self.incoming_nodes:
             node.outcoming_nodes.append(self)
-        
+
         for n in self.incoming_nodes:
             if isinstance(n, Node) and n.output_node is not None:
                 n.output_node.outcoming_nodes.append(self)
@@ -49,26 +60,23 @@ class Node(OperationsMixin):
     def backward(self, with_respect):
         raise NotImplementedError
 
-    def is_last_operation(self, node):
-        if len(node.outcoming_nodes) == 0:
-            return True
-        return False
-
     def compute_gradients(self, with_respect):
-        path_to_target_variable = []
+        path = []
         latest_grad = 1.0
 
-        def _compute_grad(node: Node):
-            path_to_target_variable.append(node)
+        def _build_path_to_target_variable(node: Node):
+            path.append(node)
             for n in node.outcoming_nodes:
-                _compute_grad(n)
-        _compute_grad(with_respect)
-        path_to_target_variable = list(reversed(path_to_target_variable))
-        # print(path_to_target_variable)
-        for most_recent_operation, prev_operation in zip(
-            path_to_target_variable[:-1], path_to_target_variable[1:]
-        ):
+                _build_path_to_target_variable(n)
+
+        _build_path_to_target_variable(with_respect)
+        path = list(reversed(path))
+        for node in with_respect.outcoming_nodes:
+            node.has_target_variable = True
+        for most_recent_operation, prev_operation in zip(path[:-1], path[1:]):
             out = most_recent_operation.backward(prev_operation).data
+            if len(out.shape) < 1 or out.shape[0] == 1 and latest_grad.shape[0] > 1:
+                latest_grad = np.sum(latest_grad)
             latest_grad *= out
         return latest_grad
 

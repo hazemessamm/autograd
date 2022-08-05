@@ -61,7 +61,7 @@ class OperationsMixin:
 
     def cos(self):
         return primitive_ops.cos(self)
-    
+
     def cosh(self):
         return primitive_ops.cosh(self)
 
