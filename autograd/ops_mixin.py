@@ -61,6 +61,12 @@ class OperationsMixin:
 
     def cos(self):
         return primitive_ops.cos(self)
+    
+    def cosh(self):
+        return primitive_ops.cosh(self)
+
+    def sinh(self):
+        return primitive_ops.sinh(self)
 
     def compute_gradients(self):
         return self.outcoming_nodes[-1].compute_gradients(with_respect=self)

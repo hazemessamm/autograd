@@ -16,6 +16,12 @@ class Leaf:
     def data(self):
         return self._data
 
+    @property
+    def shape(self):
+        if getattr(self, '_assigned', False) and not self._assigned:
+            raise ValueError('Placeholder is not initialized yet.')
+        return self._data.shape
+
     def __repr__(self):
         return f"<{self.__class__.__name__.capitalize()} {self.data}>"
 
