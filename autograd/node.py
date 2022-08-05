@@ -1,4 +1,4 @@
-from typing import TypeVar, List
+from typing import List, TypeVar
 
 Node = TypeVar('Node', bound='Node')
 
@@ -27,7 +27,7 @@ class Node:
     def backward(self, variable):
         raise NotImplementedError
 
-    def is_leaf(self, node):
+    def is_last_operation(self, node):
         if len(node.outcoming_nodes) == 0:
             return True
         return False
@@ -36,7 +36,7 @@ class Node:
         path_to_target_variable = []
         latest_grad = 1.
         def _compute_grad(node: Node):
-            if self.is_leaf(node):
+            if self.is_last_operation(node):
                 return
             path_to_target_variable.append(node)
             for n in node.outcoming_nodes:
