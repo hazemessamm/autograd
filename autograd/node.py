@@ -7,15 +7,13 @@ class Node:
     def __init__(self, incoming_nodes: List[Node] = []):
         self.incoming_nodes = incoming_nodes
         self.outcoming_nodes = []
-        self._output = None
+        self.output = None
         self._attach_to_outcoming_nodes()
 
     @property
     def data(self):
-        return self.forward()
-
-    @property
-    def output(self):
+        if self.output is not None:
+            return self.output
         return self.forward()
 
     def _attach_to_outcoming_nodes(self):
@@ -25,7 +23,7 @@ class Node:
     def forward(self):
         raise NotImplementedError
 
-    def backward(self, variable):
+    def backward(self, with_respect):
         raise NotImplementedError
 
     def is_last_operation(self, node):

@@ -9,7 +9,9 @@ class add(Node):
         super(add, self).__init__([x, y])
 
     def forward(self):
-        return np.add(self.incoming_nodes[0].data, self.incoming_nodes[1].data)
+        x, y = self.incoming_nodes[0].data, self.incoming_nodes[1].data
+        self.output = np.add(x, y)
+        return self.output
 
     def backward(self, with_respect):
         return variable.Variable(1.0)
@@ -20,7 +22,9 @@ class subtract(Node):
         super(subtract, self).__init__([x, y])
 
     def forward(self):
-        return np.add(self.incoming_nodes[0].data, self.incoming_nodes[1].data)
+        x, y = self.incoming_nodes[0].data, self.incoming_nodes[1].data
+        self.output = np.subtract(x, y)
+        return self.output
 
     def backward(self, with_respect):
         derivative = 1.0 if with_respect == self.incoming_nodes[0] else -1.0
@@ -33,7 +37,8 @@ class multiply(Node):
 
     def forward(self):
         x, y = self.incoming_nodes[0].data, self.incoming_nodes[1].data
-        return np.multiply(x, y)
+        self.output = np.multiply(x, y)
+        return self.output
 
     def backward(self, with_respect):
         variable_1, variable_2 = self.incoming_nodes
@@ -42,7 +47,7 @@ class multiply(Node):
         elif with_respect == variable_2:
             derivative = variable_1.data
         else:
-            derivative = 0.0
+            derivative = 0.
         return variable.Variable(derivative)
 
 
@@ -52,7 +57,8 @@ class power(Node):
         self.p = p
 
     def forward(self):
-        return np.power(self.incoming_nodes[0].data, self.p)
+        self.output = np.power(self.incoming_nodes[0].data, self.p)
+        return self.output
 
     def backward(self, with_respect):
         if with_respect:
@@ -68,7 +74,8 @@ class divide(Node):
 
     def forward(self):
         x, y = self.incoming_nodes[0].data, self.incoming_nodes[1].data
-        return np.divide(x, y)
+        self.output = np.divide(x, y)
+        return self.output
 
     def backward(self, with_respect):
         variable_1, variable_2 = self.incoming_nodes
@@ -84,8 +91,8 @@ class exp(Node):
         super().__init__([x])
 
     def forward(self):
-        out = np.exp(self.incoming_nodes[0].data)
-        return out
+        self.output = np.exp(self.incoming_nodes[0].data)
+        return self.output
 
     def backward(self, with_respect):
         derivative = self.forward()
@@ -100,7 +107,8 @@ class sigmoid(Node):
         self.div = divide(variable.Variable(1.0), self.add)
 
     def forward(self):
-        return self.div.forward()
+        self.output = self.div.forward()
+        return self.output
 
     def backward(self, with_respect):
         return self.div.backward(with_respect)
@@ -111,7 +119,8 @@ class sin(Node):
         super().__init__([x])
 
     def forward(self):
-        return np.sin(self.incoming_nodes[0].data)
+        self.output = np.sin(self.incoming_nodes[0].data)
+        return self.output
 
     def backward(self):
         derivative = np.cos(self.incoming_nodes[0].data)
@@ -123,7 +132,8 @@ class cos(Node):
         super().__init__([x])
 
     def forward(self):
-        return np.cos(self.incoming_nodes[0].data)
+        self.output = np.cos(self.incoming_nodes[0].data)
+        return self.output
 
     def backward(self):
         derivative = -np.sin(self.incoming_nodes[0].data)
@@ -135,7 +145,8 @@ class sinh(Node):
         super().__init__([x])
 
     def forward(self):
-        return np.sinh(self.incoming_nodes[0].data)
+        self.output = np.sinh(self.incoming_nodes[0].data)
+        return self.output
 
     def backward(self):
         derivative = np.cosh(self.incoming_nodes[0].data)
@@ -147,7 +158,8 @@ class cosh(Node):
         super().__init__([x])
 
     def forward(self):
-        return np.cosh(self.incoming_nodes[0].data)
+        self.output = np.cosh(self.incoming_nodes[0].data)
+        return self.output
 
     def backward(self):
         derivative = np.sinh(self.incoming_nodes[0].data)
