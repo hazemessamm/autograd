@@ -5,29 +5,30 @@ A simple autograd library.
 
 
 ```python
-import autograd
 import jax
+import numpy as np
 
+import autograd
 
 x = autograd.Variable(2)
 y = autograd.Variable(4)
 
 mul_operation = autograd.multiply(x, y)
 
-print("Forward result:", mul_operation.forward())
+print("autograd forward result:", mul_operation.forward())
 # output: Forward result: 8
 
-print("Backward result with respect to x:", mul_operation.compute_gradients(with_respect=x))
+print("autograd backward result with respect to x:", mul_operation.compute_gradients(with_respect=x))
 # output: Backward result with respect to x: 4.0
 
-print("Backward result with respect to y:", mul_operation.compute_gradients(with_respect=y))
+print("autograd backward result with respect to y:", mul_operation.compute_gradients(with_respect=y))
 # output: Backward result with respect to y: 2.0
 
 # JAX implementation
 def multiply(x, y):
     return x * y
 
-print("JAX Forward result:", multiply(2., 4.))
+print("JAX forward result:", multiply(2., 4.))
 # output: JAX Forward result: 8.0
 
 # argnums is the same as with_respect in autograd,
@@ -52,17 +53,17 @@ add_op = autograd.add(x, y)
 mul_op = autograd.multiply(add_op, z)
 pow_op = autograd.power(mul_op, 2)
 
-print("Forward result:", pow_op.forward())
+print("autograd forward result:", pow_op.forward())
 # output: Forward result: 2500.0
 
 # To get the gradients we will call `compute_gradients` from the last operation `pow_op`
-print("Backward result with respect to x:", pow_op.compute_gradients(with_respect=x))
+print("autograd backward result with respect to x:", pow_op.compute_gradients(with_respect=x))
 # output: Backward result with respect to x: 1000.0
 
-print("Backward result with respect to y:", pow_op.compute_gradients(with_respect=y))
+print("autograd backward result with respect to y:", pow_op.compute_gradients(with_respect=y))
 # output: Backward result with respect to y: 1000.0
 
-print("Backward result with respect to z:", pow_op.compute_gradients(with_respect=z))
+print("autograd backward result with respect to z:", pow_op.compute_gradients(with_respect=z))
 # output: Backward result with respect to z: 500.0
 
 
@@ -95,7 +96,7 @@ sigmoid_op = autograd.sigmoid(x)
 print("Forward result: ", sigmoid_op.forward())
 # output: Forward result:  0.549833997312478
 
-print("Backward result with respect to x:", sigmoid_op.compute_gradients(x))
+print("Backward result with respect to x:", sigmoid_op.compute_gradients(with_respect=x))
 # output: Backward result with respect to x: 0.24751657271185995
 
 # In JAX
@@ -110,4 +111,43 @@ print("JAX forward result:", sigmoid(0.2))
 # argnums = 0 means with respect  to `x``.
 print("JAX backward result with respect to x:", jax.grad(sigmoid, argnums=0)(0.2))
 # output: JAX backward result with respect to x: 0.24751654
+
+
+x = np.random.random((10,))
+y = np.random.random((10,))
+z = np.random.random((10,))
+a = np.random.random((10,))
+
+def fun(x, y, z, a):
+    x1 = jax.numpy.dot(x, y)
+    x2 = jax.numpy.add(x1, z)
+    x3 = jax.numpy.subtract(x2, a)
+    x4 = jax.numpy.sum(x3)
+    return x4
+
+
+x1 = autograd.Variable(x)
+y1 = autograd.Variable(y)
+z1 = autograd.Variable(z)
+a1 = autograd.Variable(a)
+
+dot_op = autograd.dot(x1, y1)
+add_op = autograd.add(dot_op, z1)
+add_op_2 = autograd.subtract(add_op, a1)
+sum_op = autograd.sum(add_op_2)
+
+print("autograd forward:", sum_op.forward())
+print("JAX forward:", fun(x, y, z, a))
+
+print("autograd backward with respect to x:", sum_op.compute_gradients(with_respect=x1))
+print("JAX backward with respect to x:", jax.grad(fun, 0)(x, y, z, a))
+
+print("autograd backward with respect to y:", sum_op.compute_gradients(with_respect=y1))
+print("JAX backward with respect to y:", jax.grad(fun, 1)(x, y, z, a))
+
+print("autograd backward with respect to z:", sum_op.compute_gradients(with_respect=z1))
+print("JAX backward with respect to z:", jax.grad(fun, 2)(x, y, z, a))
+
+print("autograd backward with respect to a:", sum_op.compute_gradients(with_respect=a1))
+print("JAX backward with respect to a:", jax.grad(fun, 3)(x, y, z, a))
 ```

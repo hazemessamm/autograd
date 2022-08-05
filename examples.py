@@ -109,30 +109,37 @@ print("JAX backward result with respect to x:", jax.grad(sigmoid, argnums=0)(0.2
 x = np.random.random((10,))
 y = np.random.random((10,))
 z = np.random.random((10,))
+a = np.random.random((10,))
 
-def fun(x, y, z):
-    out = jax.numpy.dot(x, y)
-    out = jax.numpy.add(out, z)
-    out = jax.numpy.sum(out)
-    return out
+def fun(x, y, z, a):
+    x1 = jax.numpy.dot(x, y)
+    x2 = jax.numpy.add(x1, z)
+    x3 = jax.numpy.subtract(x2, a)
+    x4 = jax.numpy.sum(x3)
+    return x4
 
 
 x1 = autograd.Variable(x)
 y1 = autograd.Variable(y)
 z1 = autograd.Variable(z)
+a1 = autograd.Variable(a)
 
 dot_op = autograd.dot(x1, y1)
 add_op = autograd.add(dot_op, z1)
-sum_op = autograd.sum(add_op)
+add_op_2 = autograd.subtract(add_op, a1)
+sum_op = autograd.sum(add_op_2)
 
 print("autograd forward:", sum_op.forward())
-print("JAX forward:", fun(x, y, z))
+print("JAX forward:", fun(x, y, z, a))
 
 print("autograd backward with respect to x:", sum_op.compute_gradients(with_respect=x1))
-print("JAX backward with respect to x:", jax.grad(fun, 0)(x, y, z))
+print("JAX backward with respect to x:", jax.grad(fun, 0)(x, y, z, a))
 
 print("autograd backward with respect to y:", sum_op.compute_gradients(with_respect=y1))
-print("JAX backward with respect to y:", jax.grad(fun, 1)(x, y, z))
+print("JAX backward with respect to y:", jax.grad(fun, 1)(x, y, z, a))
 
 print("autograd backward with respect to z:", sum_op.compute_gradients(with_respect=z1))
-print("JAX backward with respect to z:", jax.grad(fun, 2)(x, y, z))
+print("JAX backward with respect to z:", jax.grad(fun, 2)(x, y, z, a))
+
+print("autograd backward with respect to a:", sum_op.compute_gradients(with_respect=a1))
+print("JAX backward with respect to a:", jax.grad(fun, 3)(x, y, z, a))
