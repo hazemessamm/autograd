@@ -136,8 +136,8 @@ class exp(Node):
         return self.output
 
     def backward(self, with_respect):
-        derivative = self.forward()
-        return variable.Variable(derivative)
+        # self.data == self.forward() but cached
+        return variable.Variable(self.data)
 
 
 class sigmoid(Node):
@@ -145,6 +145,9 @@ class sigmoid(Node):
         super().__init__([])
         self.exp_op = exp(-x)
         self.add_op = add(variable.Variable(1.0), self.exp_op)
+        # Here the divide operation is stored in the self.output_node
+        # because the divide operation is a nested operation (it's inside the sigmoid class/operation)
+        # so we must specify which nested operation computes the final output for the sigmoid
         self.output_node = divide(variable.Variable(1.0), self.add_op)
 
     def forward(self):

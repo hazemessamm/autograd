@@ -73,10 +73,9 @@ class Node(OperationsMixin):
 
         _build_path_to_target_variable(with_respect)
         path = list(reversed(path))
-        for node in with_respect.outcoming_nodes:
-            node.has_target_variable = True
         for most_recent_operation, prev_operation in zip(path[:-1], path[1:]):
             out = most_recent_operation.backward(prev_operation).data
+            # sum the latest_grad if the upcoming grad is a scalar variable
             if len(out.shape) < 1 or out.shape[0] == 1 and latest_grad.shape[0] > 1:
                 latest_grad = np.sum(latest_grad)
             latest_grad *= out
