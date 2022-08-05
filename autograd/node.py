@@ -18,6 +18,8 @@ class Node(OperationsMixin):
         self.output = None
         # for connecting nodes
         self._attach_to_outcoming_nodes()
+        # caching gradients
+        self.gradients = None
 
     @property
     def data(self):
@@ -60,7 +62,7 @@ class Node(OperationsMixin):
     def backward(self, with_respect):
         raise NotImplementedError
 
-    def compute_gradients(self, with_respect):
+    def compute_gradients(self, with_respect, save_gradients=True):
         path = []
         latest_grad = 1.0
 
@@ -78,7 +80,11 @@ class Node(OperationsMixin):
             if len(out.shape) < 1 or out.shape[0] == 1 and latest_grad.shape[0] > 1:
                 latest_grad = np.sum(latest_grad)
             latest_grad *= out
+        
+        if save_gradients:
+            with_respect.gradients = latest_grad
         return latest_grad
+
 
     def __repr__(self):
         return f"<{self.__class__.__name__.capitalize()} Operation>"

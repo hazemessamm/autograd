@@ -19,7 +19,7 @@ print("autograd backward result with respect to y:", mul_operation.compute_gradi
 
 # JAX implementation
 def multiply(x, y):
-    return x * y
+    return jax.numpy.multiply(x, y)
 
 print("JAX forward result:", multiply(2., 4.))
 # output: JAX Forward result: 8.0
@@ -62,9 +62,9 @@ print("autograd backward result with respect to z:", pow_op.compute_gradients(wi
 
 # In JAX
 def fun(x, y, z):
-    out = x + y
-    out = out * z
-    out = out ** 2
+    out = jax.numpy.add(x, y)
+    out = jax.numpy.multiply(out, z)
+    out = jax.numpy.power(out, 2)
     return out
 
 
@@ -95,7 +95,7 @@ print("Backward result with respect to x:", sigmoid_op.compute_gradients(with_re
 # In JAX
 def sigmoid(x):
     exp_result = jax.numpy.exp(-x)
-    return 1 / (1 + exp_result)
+    return jax.numpy.divide(1, jax.add(1, exp_result))
 
 
 print("JAX forward result:", sigmoid(0.2))

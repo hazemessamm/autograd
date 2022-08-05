@@ -52,6 +52,9 @@ class OperationsMixin:
 
     def power(self, x):
         return primitive_ops.power(self, x)
+    
+    def sum(self):
+        return primitive_ops.sum(self)
 
     def exp(self):
         return primitive_ops.exp(self)
@@ -68,5 +71,8 @@ class OperationsMixin:
     def sinh(self):
         return primitive_ops.sinh(self)
 
-    def compute_gradients(self):
-        return self.outcoming_nodes[-1].compute_gradients(with_respect=self)
+    def compute_gradients(self, save_gradients=True):
+        gradient = self.outcoming_nodes[-1].compute_gradients(with_respect=self)
+        if save_gradients:
+            self.gradients = gradient
+        return gradient
