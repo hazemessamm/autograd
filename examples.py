@@ -126,8 +126,8 @@ a1 = autograd.Variable(a)
 
 dot_op = autograd.dot(x1, y1)
 add_op = autograd.add(dot_op, z1)
-add_op_2 = autograd.subtract(add_op, a1)
-sum_op = autograd.sum(add_op_2)
+subtract_op = autograd.subtract(add_op, a1)
+sum_op = autograd.sum(subtract_op)
 
 print("autograd forward:", sum_op.forward())
 print("JAX forward:", fun(x, y, z, a))
