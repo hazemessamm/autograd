@@ -1,6 +1,6 @@
-import autograd
 import jax
 
+import autograd
 
 x = autograd.Variable(2)
 y = autograd.Variable(4)
