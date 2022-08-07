@@ -186,7 +186,6 @@ class relu(Node):
         out = np.sum(self.gradients, axis=1, keepdims=True)
         out = np.repeat(out, self.gradients.shape[0], 1)
         out = np.transpose(out, (1, 0))
-        print("in:", self, "Here", with_respect, self, out)
         with_respect.gradients = out * (self.data > 0)
         return autograd.Variable(out)
 
