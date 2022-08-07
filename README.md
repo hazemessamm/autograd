@@ -26,7 +26,7 @@ print("autograd backward result with respect to y:", mul_operation.compute_gradi
 
 # JAX implementation
 def multiply(x, y):
-    return x * y
+    return jax.numpy.multiply(x, y)
 
 print("JAX forward result:", multiply(2., 4.))
 # output: JAX Forward result: 8.0
@@ -69,9 +69,9 @@ print("autograd backward result with respect to z:", pow_op.compute_gradients(wi
 
 # In JAX
 def fun(x, y, z):
-    out = x + y
-    out = out * z
-    out = out ** 2
+    out = jax.numpy.add(x, y)
+    out = jax.numpy.multiply(out, z)
+    out = jax.numpy.power(out, 2)
     return out
 
 
@@ -102,7 +102,7 @@ print("Backward result with respect to x:", sigmoid_op.compute_gradients(with_re
 # In JAX
 def sigmoid(x):
     exp_result = jax.numpy.exp(-x)
-    return 1 / (1 + exp_result)
+    return jax.numpy.divide(1, jax.numpy.add(1, exp_result))
 
 
 print("JAX forward result:", sigmoid(0.2))
@@ -139,15 +139,28 @@ sum_op = autograd.sum(subtract_op)
 print("autograd forward:", sum_op.forward())
 print("JAX forward:", fun(x, y, z, a))
 
+
 print("autograd backward with respect to x:", sum_op.compute_gradients(with_respect=x1))
 print("JAX backward with respect to x:", jax.grad(fun, 0)(x, y, z, a))
+# autograd backward with respect to x: [6.3844933  3.9611041  2.33771962 9.68987395 1.72684158 7.47751763
+#  7.31587926 6.02737319 0.75296799 9.17692717]
+# JAX backward with respect to x: [6.384493   3.9611042  2.3377197  9.689874   1.7268417  7.4775176
+#  7.3158793  6.0273733  0.75296795 9.176928  ]
 
 print("autograd backward with respect to y:", sum_op.compute_gradients(with_respect=y1))
 print("JAX backward with respect to y:", jax.grad(fun, 1)(x, y, z, a))
+# autograd backward with respect to y: [9.45207635 1.70625245 5.05379598 9.40853143 9.04044283 6.65199962
+#  3.27781663 6.67883743 6.75181513 0.77476909]
+# JAX backward with respect to y: [9.452077  1.7062523 5.0537963 9.408531  9.040442  6.6519995 3.2778168
+#  6.678838  6.751815  0.7747691]
 
 print("autograd backward with respect to z:", sum_op.compute_gradients(with_respect=z1))
 print("JAX backward with respect to z:", jax.grad(fun, 2)(x, y, z, a))
+# autograd backward with respect to z: [1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+# JAX backward with respect to z: [1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
 
 print("autograd backward with respect to a:", sum_op.compute_gradients(with_respect=a1))
 print("JAX backward with respect to a:", jax.grad(fun, 3)(x, y, z, a))
+# autograd backward with respect to a: [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1.]
+# JAX backward with respect to a: [-1. -1. -1. -1. -1. -1. -1. -1. -1. -1.]
 ```

@@ -96,7 +96,7 @@ class sum(Node):
         super().__init__([x])
 
     def forward(self):
-        self.output = self.get_incoming_nodes().data
+        self.output = np.sum(self.get_incoming_nodes().data)
         return self.output
 
     def backward(self, with_respect):
@@ -188,7 +188,6 @@ class relu(Node):
         out = np.transpose(out, (1, 0))
         with_respect.gradients = out * (self.data > 0)
         return autograd.Variable(out)
-
 
 class sin(Node):
     def __init__(self, x):

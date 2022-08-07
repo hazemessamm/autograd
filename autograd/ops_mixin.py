@@ -46,6 +46,12 @@ class OperationsMixin:
 
     def multiply(self, x):
         return primitive_ops.multiply(self, x)
+    
+    def matmul(self, x):
+        return primitive_ops.matmul(self, x)
+    
+    def dot(self, x):
+        return primitive_ops.dot(self, x)
 
     def divide(self, x):
         return primitive_ops.divide(self, x)
