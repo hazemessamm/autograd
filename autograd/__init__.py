@@ -7,6 +7,8 @@ from autograd.primitive_ops import sigmoid
 from autograd.primitive_ops import subtract
 from autograd.primitive_ops import dot
 from autograd.primitive_ops import sum
+from autograd.primitive_ops import relu
+from autograd.primitive_ops import matmul
 from autograd.ops_mixin import OperationsMixin
 from autograd.variable import Placeholder, Variable
 from autograd.node import Node

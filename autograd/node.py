@@ -19,7 +19,7 @@ class Node(OperationsMixin):
         # for connecting nodes
         self._attach_to_outcoming_nodes()
         # caching gradients
-        self.gradients = None
+        self.gradients = 0.
 
     @property
     def data(self):
@@ -32,21 +32,21 @@ class Node(OperationsMixin):
         return self.data.shape
 
     def get_incoming_nodes(self) -> Union[List[Node], Node]:
-        '''Returns incoming nodes and also checks 
-        if an incoming node has nested nodes 
+        '''Returns incoming nodes and also checks
+        if an incoming node has nested nodes
         so it can return the last nested node'''
 
         if len(self.incoming_nodes) > 1:
             return self.incoming_nodes
 
         incoming_node = self.incoming_nodes[0]
-        if len(self.incoming_nodes) == 1:
-            if incoming_node.output_node is not None:
-                return incoming_node.output_node
-            else:
-                return incoming_node
-        else:
+        if not len(self.incoming_nodes) == 1:
             return self.incoming_nodes
+        
+        if isinstance(incoming_node, Node) and incoming_node.output_node is not None:
+            return incoming_node.output_node
+        else:
+            return incoming_node
 
     def _attach_to_outcoming_nodes(self):
         for node in self.incoming_nodes:
@@ -62,9 +62,16 @@ class Node(OperationsMixin):
     def backward(self, with_respect):
         raise NotImplementedError
 
-    def compute_gradients(self, with_respect, save_gradients=True):
+    def cache_gradients_if_enabled(self, cache, op, grad):
+        if cache: self.cached_gradients[op.__class__.__name__+'_grad'] = grad
+
+    def reset_gradients(self, nodes):
+        for node in nodes:
+            node.gradients = 0.
+
+    def compute_gradients(self, with_respect):
         path = []
-        latest_grad = 1.0
+        latest_grad = np.array([1.0])
 
         def _build_path_to_target_variable(node: Node):
             path.append(node)
@@ -73,15 +80,14 @@ class Node(OperationsMixin):
 
         _build_path_to_target_variable(with_respect)
         path = list(reversed(path))
+        self.reset_gradients(path)
+        self.gradients = 1.0
         for most_recent_operation, prev_operation in zip(path[:-1], path[1:]):
             out = most_recent_operation.backward(prev_operation).data
             # sum the latest_grad if the upcoming grad is a scalar variable
-            if len(out.shape) < 1 or out.shape[0] == 1 and latest_grad.shape[0] > 1:
+            if len(out.shape) < 1:
                 latest_grad = np.sum(latest_grad)
-            latest_grad *= out
-        
-        if save_gradients:
-            with_respect.gradients = latest_grad
+            latest_grad = np.multiply(latest_grad, out)
         return latest_grad
 
 

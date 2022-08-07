@@ -95,7 +95,7 @@ print("Backward result with respect to x:", sigmoid_op.compute_gradients(with_re
 # In JAX
 def sigmoid(x):
     exp_result = jax.numpy.exp(-x)
-    return jax.numpy.divide(1, jax.add(1, exp_result))
+    return jax.numpy.divide(1, jax.numpy.add(1, exp_result))
 
 
 print("JAX forward result:", sigmoid(0.2))

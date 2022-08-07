@@ -1,6 +1,7 @@
 import numpy as np
 
 from autograd import variable
+import autograd
 from autograd.node import Node
 
 
@@ -14,7 +15,8 @@ class add(Node):
         return self.output
 
     def backward(self, with_respect):
-        return variable.Variable(np.ones(with_respect.shape))
+        with_respect.gradients += np.ones(with_respect.shape)
+        return variable.Variable(with_respect.gradients)
 
 
 class subtract(Node):
@@ -29,10 +31,10 @@ class subtract(Node):
     def backward(self, with_respect):
         x, y = self.get_incoming_nodes()
         if with_respect is x:
-            derivative = np.ones(x.shape)
+            with_respect.gradients += np.ones(x.shape)
         elif with_respect is y:
-            derivative = -np.ones(y.shape)
-        return variable.Variable(derivative)
+            with_respect.gradients += -np.ones(y.shape)
+        return variable.Variable(with_respect.gradients)
 
 
 class multiply(Node):
@@ -47,12 +49,10 @@ class multiply(Node):
     def backward(self, with_respect):
         variable_1, variable_2 = self.get_incoming_nodes()
         if with_respect is variable_1:
-            derivative = variable_2.data
+            with_respect.gradients += variable_2.data
         elif with_respect is variable_2:
-            derivative = variable_1.data
-        else:
-            derivative = 0.0
-        return variable.Variable(derivative)
+            with_respect.gradients += variable_1.data
+        return variable.Variable(with_respect.gradients)
 
 
 class dot(Node):
@@ -67,12 +67,28 @@ class dot(Node):
     def backward(self, with_respect):
         variable_1, variable_2 = self.get_incoming_nodes()
         if with_respect is variable_1:
-            derivative = variable_2.data
+            with_respect.gradients += variable_2.data
         elif with_respect is variable_2:
-            derivative = variable_1.data
-        else:
-            derivative = 0.0
-        return variable.Variable(derivative)
+            with_respect.gradients += variable_1.data
+        return variable.Variable(with_respect.gradients)
+
+
+class matmul(Node):
+    def __init__(self, x, y):
+        super().__init__([x, y])
+
+    def forward(self):
+        x, y = self.get_incoming_nodes()
+        self.output = np.matmul(x.data, y.data)
+        return self.output
+
+    def backward(self, with_respect):
+        variable_1, variable_2 = self.get_incoming_nodes()
+        if with_respect is variable_1:
+            with_respect.gradients += variable_2.data
+        elif with_respect is variable_2:
+            with_respect.gradients += variable_1.data
+        return variable.Variable(with_respect.gradients)
 
 
 class sum(Node):
@@ -86,10 +102,10 @@ class sum(Node):
     def backward(self, with_respect):
         x = self.get_incoming_nodes()
         if with_respect is x:
-            derivative = np.ones(x.shape)
+            with_respect.gradients += np.ones(x.shape)
         else:
-            derivative = np.zeros(x.shape)
-        return variable.Variable(derivative)
+            with_respect.gradients += np.zeros(x.shape)
+        return variable.Variable(with_respect.gradients)
 
 
 class power(Node):
@@ -103,10 +119,8 @@ class power(Node):
 
     def backward(self, with_respect):
         if with_respect:
-            derivative = self.p * with_respect.data ** (self.p - 1)
-        else:
-            derivative = 0.0
-        return variable.Variable(derivative)
+            with_respect.gradients += self.p * with_respect.data ** (self.p - 1)
+        return variable.Variable(with_respect.gradients)
 
 
 class divide(Node):
@@ -121,10 +135,10 @@ class divide(Node):
     def backward(self, with_respect):
         variable_1, variable_2 = self.get_incoming_nodes()
         if with_respect is variable_1:
-            derivative = variable_2.data ** -1
+            with_respect.gradients += variable_2.data ** -1
         else:
-            derivative = variable_1.data * (-1 * variable_2.data ** -2)
-        return variable.Variable(derivative)
+            with_respect.gradients += variable_1.data * (-1 * variable_2.data ** -2)
+        return variable.Variable(with_respect.gradients)
 
 
 class exp(Node):
@@ -137,7 +151,8 @@ class exp(Node):
 
     def backward(self, with_respect):
         # self.data == self.forward() but cached
-        return variable.Variable(self.data)
+        with_respect.gradients += self.data
+        return variable.Variable(with_respect.gradients)
 
 
 class sigmoid(Node):
@@ -155,7 +170,25 @@ class sigmoid(Node):
         return self.output
 
     def backward(self, with_respect):
-        return variable.Variable(self.output_node.backward(with_respect).data)
+        with_respect.gradients += self.output_node.backward(with_respect).data
+        return variable.Variable(with_respect.gradients)
+
+class relu(Node):
+    def __init__(self, x):
+        super().__init__([x])
+    
+    def forward(self):
+        x = self.get_incoming_nodes()
+        self.output = np.maximum(x.data, 0.)
+        return self.output
+
+    def backward(self, with_respect):
+        out = np.sum(self.gradients, axis=1, keepdims=True)
+        out = np.repeat(out, self.gradients.shape[0], 1)
+        out = np.transpose(out, (1, 0))
+        print("in:", self, "Here", with_respect, self, out)
+        with_respect.gradients = out * (self.data > 0)
+        return autograd.Variable(out)
 
 
 class sin(Node):
@@ -166,9 +199,9 @@ class sin(Node):
         self.output = np.sin(self.get_incoming_nodes().data)
         return self.output
 
-    def backward(self):
-        derivative = np.cos(self.get_incoming_nodes().data)
-        return variable.Variable(derivative)
+    def backward(self, with_respect):
+        with_respect.gradients += np.cos(self.get_incoming_nodes().data)
+        return variable.Variable(with_respect.gradients)
 
 
 class cos(Node):
@@ -179,9 +212,9 @@ class cos(Node):
         self.output = np.cos(self.get_incoming_nodes().data)
         return self.output
 
-    def backward(self):
-        derivative = -np.sin(self.get_incoming_nodes().data)
-        return variable.Variable(derivative)
+    def backward(self, with_respect):
+        with_respect.gradients += -np.sin(self.get_incoming_nodes().data)
+        return variable.Variable(with_respect.gradients)
 
 
 class sinh(Node):
@@ -192,9 +225,9 @@ class sinh(Node):
         self.output = np.sinh(self.get_incoming_nodes().data)
         return self.output
 
-    def backward(self):
-        derivative = np.cosh(self.get_incoming_nodes().data)
-        return variable.Variable(derivative)
+    def backward(self, with_respect):
+        with_respect.gradients += np.cosh(self.get_incoming_nodes().data)
+        return variable.Variable(with_respect.gradients)
 
 
 class cosh(Node):
@@ -205,6 +238,6 @@ class cosh(Node):
         self.output = np.cosh(self.get_incoming_nodes().data)
         return self.output
 
-    def backward(self):
-        derivative = np.sinh(self.get_incoming_nodes().data)
-        return variable.Variable(derivative)
+    def backward(self, with_respect):
+        with_respect.gradients += np.sinh(self.get_incoming_nodes().data)
+        return variable.Variable(with_respect.gradients)
