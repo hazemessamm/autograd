@@ -5,9 +5,9 @@ from typing import List, TypeVar, Union
 from autograd.exceptions import NoPathFoundError
 from autograd.ops_mixin import OperationsMixin
 from autograd.variable import Leaf
+from autograd import backend
 
 Node = TypeVar("Node", bound="Node")
-
 
 class Node(abc.ABC, OperationsMixin):
     instances = weakref.WeakSet()
@@ -25,7 +25,6 @@ class Node(abc.ABC, OperationsMixin):
         self.gradients = 0.0
         self._nodes = None
         self.nested = False
-        self.counter = len(Node.instances)
         Node.instances.add(self)
         self.cached_graphs = {}
 
@@ -39,8 +38,6 @@ class Node(abc.ABC, OperationsMixin):
 
     @property
     def data(self):
-        if self.output is not None:
-            return self.output
         return self.forward()
 
     @property
@@ -114,18 +111,22 @@ class Node(abc.ABC, OperationsMixin):
         return path
 
     def backward(self, with_respect, cache_graph=False):
-        if not self.cached_graphs.get(with_respect, False) and cache_graph:
-            path = self._build_graph_to_target_variable(self, with_respect)
-            self.cached_graphs[with_respect] = path
-        elif not cache_graph:
-            path = self._build_graph_to_target_variable(self, with_respect)
+        if cache_graph:
+            if not self.cached_graphs.get(with_respect, False):
+                path = self._build_graph_to_target_variable(self, with_respect)
+                self.cached_graphs[with_respect] = path
+            else:
+                path = self.cached_graphs[with_respect]
         else:
-            path = self.cached_graphs[with_respect]
+            path = self._build_graph_to_target_variable(self, with_respect)
 
-        # self.reset_gradients(path)
+
+        if backend.reset_gradient_enabled():
+            self.reset_gradients(path)
+
         self.gradients = 1.0
         for most_recent_operation, prev_operation in reversed(path):
-            most_recent_operation.apply_backward(prev_operation).data
+            most_recent_operation.apply_backward(prev_operation)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__.capitalize()}Operation{self.counter}>"
+        return f"<{self.__class__.__name__.capitalize()}Operation>"
