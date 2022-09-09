@@ -1,66 +1,46 @@
-from functools import total_ordering
-
 from autograd import primitive_ops, variable
 
-
-@total_ordering
 class OperationsMixin:
     def __add__(self, x):
+        x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
         return primitive_ops.add(self, x)
 
     def __mul__(self, x):
+        x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
         return primitive_ops.multiply(self, x)
 
     def __div__(self, x):
+        x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
         return primitive_ops.divide(self, x)
+
+    def __sub__(self, x):
+        x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
+        return primitive_ops.subtract(self, x)
 
     def __pow__(self, x):
         return primitive_ops.power(self, x)
-
-    def __sub__(self, x):
-        return primitive_ops.subtract(self, x)
-
-    def __lt__(self, x):
-        return self.data < x.data
-
-    def __eq__(self, x):
-        return self.data == x.data
-
-    def __le__(self, x):
-        return self.data <= x.data
-
-    def __ge__(self, x):
-        return self.data >= x.data
-
-    def __ne__(self, x):
-        return self.data != x.data
 
     def __neg__(self):
         return primitive_ops.multiply(variable.Variable(-1), self)
 
     def add(self, x):
+        x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
         return primitive_ops.add(self, x)
 
     def subtract(self, x):
+        x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
         return primitive_ops.subtract(self, x)
 
     def multiply(self, x):
+        x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
         return primitive_ops.multiply(self, x)
-    
-    def matmul(self, x):
-        return primitive_ops.matmul(self, x)
-    
-    def dot(self, x):
-        return primitive_ops.dot(self, x)
 
     def divide(self, x):
+        x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
         return primitive_ops.divide(self, x)
 
     def power(self, x):
         return primitive_ops.power(self, x)
-    
-    def sum(self):
-        return primitive_ops.sum(self)
 
     def exp(self):
         return primitive_ops.exp(self)
@@ -82,3 +62,6 @@ class OperationsMixin:
         if save_gradients:
             self.gradients = gradient
         return gradient
+    
+    def __hash__(self):
+        return hash(id(self))

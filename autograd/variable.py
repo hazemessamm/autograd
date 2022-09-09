@@ -10,7 +10,7 @@ class Leaf:
             data = np.array(data)
         self._data = data
         self.outcoming_nodes = []
-        self.gradients = None
+        self.gradients = 0.
 
     @property
     def data(self):
