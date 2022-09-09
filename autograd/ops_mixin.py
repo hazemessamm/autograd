@@ -58,7 +58,7 @@ class OperationsMixin:
         return primitive_ops.sinh(self)
 
     def compute_gradients(self, save_gradients=True):
-        gradient = self.outcoming_nodes[-1].compute_gradients(with_respect=self)
+        gradient = self.outcoming_nodes[-1].backward(with_respect=self)
         if save_gradients:
             self.gradients = gradient
         return gradient
