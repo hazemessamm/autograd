@@ -3,6 +3,7 @@ from autograd.ops_mixin import OperationsMixin
 from autograd.variable import Variable
 import weakref
 import abc
+from autograd.exceptions import NoPathFoundError
 
 Node = TypeVar("Node", bound="Node")
 
@@ -23,6 +24,7 @@ class Node(abc.ABC, OperationsMixin):
         self.nested = False
         self.counter = len(Node.instances)
         Node.instances.add(self)
+        self.cached_graphs = {}
 
     def __setattr__(self, __name: str, __value: Node) -> None:
         if isinstance(__value, Node):
@@ -91,22 +93,36 @@ class Node(abc.ABC, OperationsMixin):
             node1.gradients = 0.
             node2.gradients = 0.
 
-    def backward(self, with_respect):
+    def _build_graph_to_target_variable(self, node, with_respect):
         path = []
-        def _build_path_to_target_variable(prev_node):
-            nonlocal with_respect
-            for i in prev_node.incoming_nodes:
+        not_variable_error_flag = True
+        def traverse(node):
+            nonlocal path, with_respect, not_variable_error_flag
+            for i in node.incoming_nodes:
                 if not isinstance(i, Variable):
-                    _build_path_to_target_variable(i)
-                if (isinstance(i, Variable) and i is with_respect or isinstance(i, Node)) and (prev_node, i) not in path:
-                    path.append((prev_node, i))
+                    traverse(i)
+                if (isinstance(i, Variable) and i is with_respect or isinstance(i, Node)) and (node, i) not in path:
+                    if i is with_respect:
+                        not_variable_error_flag = False
+                    path.append((node, i))
+        traverse(node)
+        
+        if not_variable_error_flag:
+            raise NoPathFoundError(f'Cannot create a graph for variable {with_respect}')
+        return path
 
-        _build_path_to_target_variable(self)
+    def backward(self, with_respect, cache_graph=False):
+        if not self.cached_graphs.get(with_respect, False) and cache_graph:
+            path = self._build_graph_to_target_variable(self, with_respect)
+            self.cached_graphs[with_respect] = path
+        elif not cache_graph:
+            path = self._build_graph_to_target_variable(self, with_respect)
+        else:
+            path = self.cached_graphs[with_respect]
+
         self.reset_gradients(path)
-        print(path)
-        path = reversed(path)
         self.gradients = 1.0
-        for most_recent_operation, prev_operation in path:
+        for most_recent_operation, prev_operation in reversed(path):
             most_recent_operation.apply_backward(prev_operation).data
 
 

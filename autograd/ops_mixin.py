@@ -57,11 +57,5 @@ class OperationsMixin:
     def sinh(self):
         return primitive_ops.sinh(self)
 
-    def compute_gradients(self, save_gradients=True):
-        gradient = self.outcoming_nodes[-1].backward(with_respect=self)
-        if save_gradients:
-            self.gradients = gradient
-        return gradient
-    
     def __hash__(self):
         return hash(id(self))
