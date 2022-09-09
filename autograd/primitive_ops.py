@@ -119,7 +119,9 @@ class power(Node):
 
     def apply_backward(self, with_respect):
         if with_respect:
-            with_respect.gradients += (self.p * with_respect.data ** (self.p - 1)) * self.gradients
+            with_respect.gradients += (
+                self.p * with_respect.data ** (self.p - 1)
+            ) * self.gradients
         return variable.Variable(with_respect.gradients)
 
 
@@ -135,9 +137,11 @@ class divide(Node):
     def apply_backward(self, with_respect):
         variable_1, variable_2 = self.get_incoming_nodes()
         if with_respect is variable_1:
-            with_respect.gradients += (variable_2.data ** -1) * self.gradients
+            with_respect.gradients += (variable_2.data**-1) * self.gradients
         else:
-            with_respect.gradients += (variable_1.data * (-1 * variable_2.data ** -2)) * self.gradients
+            with_respect.gradients += (
+                variable_1.data * (-1 * variable_2.data**-2)
+            ) * self.gradients
         return variable.Variable(with_respect.gradients)
 
 
@@ -170,16 +174,19 @@ class sigmoid(Node):
         return output
 
     def apply_backward(self, with_respect):
-        with_respect.gradients += self.div_op.backward(with_respect).data * self.gradients
+        with_respect.gradients += (
+            self.div_op.backward(with_respect).data * self.gradients
+        )
         return variable.Variable(with_respect.gradients)
+
 
 class relu(Node):
     def __init__(self, x):
         super().__init__([x])
-    
+
     def apply_forward(self):
         x = self.get_incoming_nodes()
-        output = np.maximum(x.data, 0.)
+        output = np.maximum(x.data, 0.0)
         return output
 
     def apply_backward(self, with_respect):
@@ -188,6 +195,7 @@ class relu(Node):
         out = np.transpose(out, (1, 0))
         with_respect.gradients = out * (self.data > 0)
         return autograd.Variable(out)
+
 
 class sin(Node):
     def __init__(self, x):
@@ -198,7 +206,9 @@ class sin(Node):
         return output
 
     def apply_backward(self, with_respect):
-        with_respect.gradients += np.cos(self.get_incoming_nodes().data) * self.gradients
+        with_respect.gradients += (
+            np.cos(self.get_incoming_nodes().data) * self.gradients
+        )
         return variable.Variable(with_respect.gradients)
 
 
@@ -211,7 +221,9 @@ class cos(Node):
         return output
 
     def apply_backward(self, with_respect):
-        with_respect.gradients += -np.sin(self.get_incoming_nodes().data) * self.gradients
+        with_respect.gradients += (
+            -np.sin(self.get_incoming_nodes().data) * self.gradients
+        )
         return variable.Variable(with_respect.gradients)
 
 
@@ -224,7 +236,9 @@ class sinh(Node):
         return output
 
     def apply_backward(self, with_respect):
-        with_respect.gradients += np.cosh(self.get_incoming_nodes().data) * self.gradients
+        with_respect.gradients += (
+            np.cosh(self.get_incoming_nodes().data) * self.gradients
+        )
         return variable.Variable(with_respect.gradients)
 
 
@@ -237,5 +251,7 @@ class cosh(Node):
         return output
 
     def apply_backward(self, with_respect):
-        with_respect.gradients += np.sinh(self.get_incoming_nodes().data) * self.gradients
+        with_respect.gradients += (
+            np.sinh(self.get_incoming_nodes().data) * self.gradients
+        )
         return variable.Variable(with_respect.gradients)
