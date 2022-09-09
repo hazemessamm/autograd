@@ -9,6 +9,10 @@ from autograd import backend
 
 Node = TypeVar("Node", bound="Node")
 
+# Not recommended and temporary until I implement an instance tracker
+COUNTER = 0
+
+
 class Node(abc.ABC, OperationsMixin):
     instances = weakref.WeakSet()
 
@@ -26,6 +30,9 @@ class Node(abc.ABC, OperationsMixin):
         self._nodes = None
         self.nested = False
         Node.instances.add(self)
+        global COUNTER
+        COUNTER += 1
+        self.counter = COUNTER
         self.cached_graphs = {}
 
     def __setattr__(self, __name: str, __value: Node) -> None:
@@ -61,8 +68,15 @@ class Node(abc.ABC, OperationsMixin):
         else:
             return incoming_node
 
+
     def _attach_to_outcoming_nodes(self):
         for node in self.incoming_nodes:
+            # flush old operations and connections.
+            # this will be important because the weights are variables 
+            # and we are going to make multiple different forward passes on 
+            # the same weights instances so we need to flush 
+            # the old operations from the old forward passes 
+            node.outcoming_nodes = []
             if self not in node.outcoming_nodes:
                 node.outcoming_nodes.append(self)
 
@@ -128,5 +142,11 @@ class Node(abc.ABC, OperationsMixin):
         for most_recent_operation, prev_operation in reversed(path):
             most_recent_operation.apply_backward(prev_operation)
 
+
+    def global_backward(self, variables, cache_graph=False):
+        variables = backend.flatten(variables)
+        for var in variables:
+            self.backward(var, cache_graph=cache_graph)
+
     def __repr__(self):
-        return f"<{self.__class__.__name__.capitalize()}Operation>"
+        return f"<{self.__class__.__name__.capitalize()}Operation{self.counter}>"

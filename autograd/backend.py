@@ -1,4 +1,6 @@
 AUTOMATIC_GRADIENT_RESET = True
+FLUSH_OLD_OPERATIONS = True
+
 
 
 def enable_reset_gradients(state: bool):
@@ -28,3 +30,15 @@ def reset_leaf_gradients():
 def reset_gradients():
     reset_intermediate_gradients()
     reset_leaf_gradients()
+
+
+def flatten(lists):
+    result = []
+    def _flatten(l):
+        for x in l:
+            if isinstance(x, list):
+                _flatten(x)
+            else:
+                result.append(x)
+    _flatten(lists)
+    return result
