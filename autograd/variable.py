@@ -10,7 +10,7 @@ from autograd.ops_mixin import OperationsMixin
 class Leaf:
     instances = weakref.WeakSet()
     num_instances = 0
-    def __init__(self, data):
+    def __init__(self, data, name: str = None):
         if data is not None:
             data = np.array(data)
         self._data = data
@@ -21,6 +21,11 @@ class Leaf:
         with threading.Lock():
             Leaf.num_instances += 1
             self.counter = Leaf.num_instances
+        
+        if name is None:
+            self.name = f'<{self.__class__.__name__.capitalize()}{self.counter}>'
+        else:
+            self.name = name
 
     @property
     def data(self):
@@ -39,19 +44,19 @@ class Leaf:
         return self._data.shape
 
     def __repr__(self):
-        return f"<{self.__class__.__name__.capitalize()}{self.counter}>"
+        return self.name
 
 
 class Variable(Leaf, OperationsMixin):
-    def __init__(self, data):
+    def __init__(self, data, **kwargs):
         if data is None:
             raise ValueError("Cannot assign `None` to data.")
-        super(Variable, self).__init__(data)
+        super(Variable, self).__init__(data, **kwargs)
 
 
 class Placeholder(Leaf, OperationsMixin):
-    def __init__(self):
-        super().__init__(data=None)
+    def __init__(self, **kwargs):
+        super().__init__(data=None, **kwargs)
         self._assigned = False
 
     @property

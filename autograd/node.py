@@ -122,10 +122,10 @@ class Node(abc.ABC, OperationsMixin):
             self._multi_variable_backward(with_respect)
         else:
             self._single_variable_backward(with_respect)
-
     
     def _single_variable_backward(self, with_respect):
         path = self._build_graph_to_target_variable(with_respect)
+        self.cached_graphs[with_respect] = path
 
         if backend.reset_gradient_enabled():
             self.reset_gradients(path)
