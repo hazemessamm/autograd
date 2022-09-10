@@ -6,8 +6,8 @@ from autograd.node import Node
 
 
 class add(Node):
-    def __init__(self, x, y):
-        super(add, self).__init__([x, y])
+    def __init__(self, x, y, **kwargs):
+        super(add, self).__init__([x, y], **kwargs)
 
     def apply_forward(self):
         x, y = self.get_incoming_nodes()
@@ -20,8 +20,8 @@ class add(Node):
 
 
 class subtract(Node):
-    def __init__(self, x, y):
-        super(subtract, self).__init__([x, y])
+    def __init__(self, x, y, **kwargs):
+        super(subtract, self).__init__([x, y], **kwargs)
 
     def apply_forward(self):
         x, y = self.get_incoming_nodes()
@@ -38,8 +38,8 @@ class subtract(Node):
 
 
 class multiply(Node):
-    def __init__(self, x, y):
-        super(multiply, self).__init__([x, y])
+    def __init__(self, x, y, **kwargs):
+        super(multiply, self).__init__([x, y], **kwargs)
 
     def apply_forward(self):
         x, y = self.get_incoming_nodes()
@@ -56,8 +56,8 @@ class multiply(Node):
 
 
 class dot(Node):
-    def __init__(self, x, y):
-        super().__init__([x, y])
+    def __init__(self, x, y, **kwargs):
+        super().__init__([x, y], **kwargs)
 
     def apply_forward(self):
         x, y = self.get_incoming_nodes()
@@ -74,8 +74,8 @@ class dot(Node):
 
 
 class matmul(Node):
-    def __init__(self, x, y):
-        super().__init__([x, y])
+    def __init__(self, x, y, **kwargs):
+        super().__init__([x, y], **kwargs)
 
     def apply_forward(self):
         x, y = self.get_incoming_nodes()
@@ -92,8 +92,8 @@ class matmul(Node):
 
 
 class sum(Node):
-    def __init__(self, x):
-        super().__init__([x])
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
 
     def apply_forward(self):
         output = np.sum(self.get_incoming_nodes().data)
@@ -109,8 +109,8 @@ class sum(Node):
 
 
 class power(Node):
-    def __init__(self, x, p):
-        super().__init__([x])
+    def __init__(self, x, p, **kwargs):
+        super().__init__([x], **kwargs)
         self.p = p
 
     def apply_forward(self):
@@ -124,8 +124,8 @@ class power(Node):
 
 
 class divide(Node):
-    def __init__(self, x, y):
-        super().__init__([x, y])
+    def __init__(self, x, y, **kwargs):
+        super().__init__([x, y], **kwargs)
 
     def apply_forward(self):
         x, y = self.get_incoming_nodes()
@@ -135,15 +135,15 @@ class divide(Node):
     def apply_backward(self, with_respect):
         variable_1, variable_2 = self.get_incoming_nodes()
         if with_respect is variable_1:
-            with_respect.gradients += (variable_2.data ** -1) * self.gradients
+            with_respect.gradients += np.float_power(variable_2.data, -1) * self.gradients
         else:
-            with_respect.gradients += (variable_1.data * (-1 * variable_2.data ** -2)) * self.gradients
+            with_respect.gradients += (variable_1.data * (-1 * np.float_power(variable_2.data, -2))) * self.gradients
         return variable.Variable(with_respect.gradients)
 
 
 class exp(Node):
-    def __init__(self, x):
-        super().__init__([x])
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
 
     def apply_forward(self):
         output = np.exp(self.get_incoming_nodes().data)
@@ -155,8 +155,8 @@ class exp(Node):
         return variable.Variable(with_respect.gradients)
 
 class sigmoid(Node):
-    def __init__(self, x):
-        super().__init__([])
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
         # we could do it in one operation
         # but here I show how we can create an operation
         # that contains nested operations
@@ -165,16 +165,38 @@ class sigmoid(Node):
         self.div_op = divide(variable.Variable(1.0), self.add_op)
 
     def apply_forward(self):
-        output = self.output_node.forward()
+        output_node = self.get_output_node()
+        output = output_node.forward()
         return output
 
     def apply_backward(self, with_respect):
-        with_respect.gradients += self.div_op.backward(with_respect).data * self.gradients
+        output_node = self.get_output_node()
+        output_node.backward(with_respect)
+        x = self.get_incoming_nodes()
+        return variable.Variable(x.gradients)
+
+
+class atomic_sigmoid(Node):
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
+        # the same as `sigmoid` class but the `sigmoid` class is decomposed 
+        # into multiple operations but this class 
+        # implements the forward and backward directly 
+        # without depending on other operations
+        # `atomic_sigmoid` is faster because of the reasons mentioned above
+
+    def apply_forward(self):
+        x = self.get_incoming_nodes().data
+        return np.divide(1, (1 + np.exp(-x)))
+
+    def apply_backward(self, with_respect):
+        output = self.apply_forward()
+        with_respect.gradients += (output * (1 - output)) * self.gradients
         return variable.Variable(with_respect.gradients)
 
 class relu(Node):
-    def __init__(self, x):
-        super().__init__([x])
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
     
     def apply_forward(self):
         x = self.get_incoming_nodes()
@@ -182,15 +204,12 @@ class relu(Node):
         return output
 
     def apply_backward(self, with_respect):
-        out = np.sum(self.gradients, axis=1, keepdims=True)
-        out = np.repeat(out, self.gradients.shape[0], 1)
-        out = np.transpose(out, (1, 0))
-        with_respect.gradients = out * (self.data > 0)
-        return autograd.Variable(out)
+        with_respect.gradients += (self.data > 0) * self.gradients
+        return autograd.Variable(with_respect.gradients)
 
 class sin(Node):
-    def __init__(self, x):
-        super().__init__([x])
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
 
     def apply_forward(self):
         output = np.sin(self.get_incoming_nodes().data)
@@ -202,8 +221,8 @@ class sin(Node):
 
 
 class cos(Node):
-    def __init__(self, x):
-        super().__init__([x])
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
 
     def apply_forward(self):
         output = np.cos(self.get_incoming_nodes().data)
@@ -215,8 +234,8 @@ class cos(Node):
 
 
 class sinh(Node):
-    def __init__(self, x):
-        super().__init__([x])
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
 
     def apply_forward(self):
         output = np.sinh(self.get_incoming_nodes().data)
@@ -228,8 +247,8 @@ class sinh(Node):
 
 
 class cosh(Node):
-    def __init__(self, x):
-        super().__init__([x])
+    def __init__(self, x, **kwargs):
+        super().__init__([x], **kwargs)
 
     def apply_forward(self):
         output = np.cosh(self.get_incoming_nodes().data)

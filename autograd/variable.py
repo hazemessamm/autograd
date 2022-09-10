@@ -1,3 +1,4 @@
+import threading
 import weakref
 
 import numpy as np
@@ -8,6 +9,7 @@ from autograd.ops_mixin import OperationsMixin
 
 class Leaf:
     instances = weakref.WeakSet()
+    num_instances = 0
     def __init__(self, data):
         if data is not None:
             data = np.array(data)
@@ -16,9 +18,16 @@ class Leaf:
         self.gradients = 0.
         Leaf.instances.add(self)
 
+        with threading.Lock():
+            Leaf.num_instances += 1
+            self.counter = Leaf.num_instances
+
     @property
     def data(self):
-        return self._data
+        out = self._data
+        if isinstance(out, Leaf):
+            return out._data
+        return out
 
     def is_placeholder(self):
         return getattr(self, '_assigned', False) == True
@@ -30,7 +39,7 @@ class Leaf:
         return self._data.shape
 
     def __repr__(self):
-        return f"<{self.__class__.__name__.capitalize()}>"
+        return f"<{self.__class__.__name__.capitalize()}{self.counter}>"
 
 
 class Variable(Leaf, OperationsMixin):
@@ -60,3 +69,4 @@ class Placeholder(Leaf, OperationsMixin):
             raise ValueError("Cannot assign `None` to data.")
         self._data = np.array(data)
         self._assigned = True
+        return self

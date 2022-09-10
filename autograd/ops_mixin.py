@@ -5,9 +5,7 @@ def check_input_type(func):
     def wrapper(self, x):
         x = x if isinstance(x, OperationsMixin) else variable.Variable(x)
         return func(self, x)
-
     return wrapper
-
 
 class OperationsMixin:
     @check_input_type

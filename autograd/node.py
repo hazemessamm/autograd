@@ -1,46 +1,49 @@
 import abc
+import threading
 import weakref
 from typing import List, TypeVar, Union
 
+from autograd import backend
 from autograd.exceptions import NoPathFoundError
 from autograd.ops_mixin import OperationsMixin
-from autograd.variable import Leaf
-from autograd import backend
+from autograd.variable import Leaf, Variable
 
 Node = TypeVar("Node", bound="Node")
-
-# Not recommended and temporary until I implement an instance tracker
-COUNTER = 0
 
 
 class Node(abc.ABC, OperationsMixin):
     instances = weakref.WeakSet()
+    num_instances = 0
 
-    def __init__(self, incoming_nodes: List[Node] = []):
+    def __init__(self, incoming_nodes: List[Node] = [], name: str = None):
         # incoming operations or variables
         self.incoming_nodes = incoming_nodes
         # outcoming operations or variables
         self.outcoming_nodes = []
-        # for caching outputs
-        self.output = None
         # for connecting nodes
-        self._attach_to_outcoming_nodes()
         # caching gradients
         self.gradients = 0.0
-        self._nodes = None
+        self.nested_nodes = None
         self.nested = False
         Node.instances.add(self)
-        global COUNTER
-        COUNTER += 1
-        self.counter = COUNTER
         self.cached_graphs = {}
+        self._attach_to_outcoming_nodes()
+
+        with threading.Lock():
+            Node.num_instances += 1
+            self.counter = Node.num_instances
+        
+        if name is None:
+            self.name = f'<{self.__class__.__name__.capitalize()}Operation{self.counter}>'
+        else:
+            self.name = name
 
     def __setattr__(self, __name: str, __value: Node) -> None:
         if isinstance(__value, Node):
-            if self._nodes is None:
-                self._nodes = []
+            if self.nested_nodes is None:
+                self.nested_nodes = []
                 self.nested = True
-            self._nodes.append(__value)
+            self.nested_nodes.append(__value)
         return super().__setattr__(__name, __value)
 
     @property
@@ -50,6 +53,9 @@ class Node(abc.ABC, OperationsMixin):
     @property
     def shape(self):
         return self.data.shape
+
+    def get_output_node(self):
+        return self.nested_nodes[-1] if self.nested else None
 
     def get_incoming_nodes(self) -> Union[List[Node], Node]:
         """Returns incoming nodes and also checks
@@ -64,25 +70,17 @@ class Node(abc.ABC, OperationsMixin):
             return self.incoming_nodes
 
         if isinstance(incoming_node, Node) and incoming_node.nested:
-            return incoming_node._nodes[-1]
+            return incoming_node.nested_nodes[-1]
         else:
             return incoming_node
 
 
     def _attach_to_outcoming_nodes(self):
         for node in self.incoming_nodes:
-            # flush old operations and connections.
-            # this will be important because the weights are variables 
-            # and we are going to make multiple different forward passes on 
-            # the same weights instances so we need to flush 
-            # the old operations from the old forward passes 
-            node.outcoming_nodes = []
-            if self not in node.outcoming_nodes:
-                node.outcoming_nodes.append(self)
-
-        for n in self.incoming_nodes:
-            if isinstance(n, Node) and n.nested:
-                n._nodes[-1].outcoming_nodes.append(self)
+            node.outcoming_nodes.append(self)
+            
+            if isinstance(node, Node):
+                Node.instances.add(node)
 
     @abc.abstractmethod
     def apply_forward(self):
@@ -93,17 +91,14 @@ class Node(abc.ABC, OperationsMixin):
         pass
 
     def forward(self):
-        if self.output is not None:
-            return self.output
-        self.output = self.apply_forward()
-        return self.output
+        return self.apply_forward()
 
     def reset_gradients(self, nodes):
         for node1, node2 in nodes:
             node1.gradients = 0.0
             node2.gradients = 0.0
 
-    def _build_graph_to_target_variable(self, node, with_respect):
+    def _build_graph_to_target_variable(self, with_respect):
         path = []
         not_variable_error_flag = True
 
@@ -112,28 +107,25 @@ class Node(abc.ABC, OperationsMixin):
             for i in node.incoming_nodes:
                 if not isinstance(i, Leaf):
                     traverse(i)
-                if (
-                    isinstance(i, Leaf) and i is with_respect or isinstance(i, Node)
-                ) and (node, i) not in path:
+                if ((isinstance(i, Leaf) and i is with_respect) or isinstance(i, Node)) and (node, i) not in path:
                     if i is with_respect:
                         not_variable_error_flag = False
                     path.append((node, i))
 
-        traverse(node)
+        traverse(self)
         if not_variable_error_flag:
             raise NoPathFoundError(f"Cannot create a graph for variable {with_respect}")
         return path
 
-    def backward(self, with_respect, cache_graph=False):
-        if cache_graph:
-            if not self.cached_graphs.get(with_respect, False):
-                path = self._build_graph_to_target_variable(self, with_respect)
-                self.cached_graphs[with_respect] = path
-            else:
-                path = self.cached_graphs[with_respect]
+    def backward(self, with_respect):
+        if isinstance(with_respect, (tuple, list)):
+            self._multi_variable_backward(with_respect)
         else:
-            path = self._build_graph_to_target_variable(self, with_respect)
+            self._single_variable_backward(with_respect)
 
+    
+    def _single_variable_backward(self, with_respect):
+        path = self._build_graph_to_target_variable(with_respect)
 
         if backend.reset_gradient_enabled():
             self.reset_gradients(path)
@@ -142,11 +134,9 @@ class Node(abc.ABC, OperationsMixin):
         for most_recent_operation, prev_operation in reversed(path):
             most_recent_operation.apply_backward(prev_operation)
 
-
-    def global_backward(self, variables, cache_graph=False):
-        variables = backend.flatten(variables)
-        for var in variables:
-            self.backward(var, cache_graph=cache_graph)
+    def _multi_variable_backward(self, variables):
+        for var in backend.flatten(variables):
+            self._single_variable_backward(var)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__.capitalize()}Operation{self.counter}>"
+        return self.name
