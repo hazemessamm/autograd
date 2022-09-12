@@ -25,13 +25,11 @@ class Node(abc.ABC, OperationsMixin):
         self.gradients = 0.0
         self.nested_nodes = None
         self.nested = False
-        Node.instances.add(self)
         self.cached_graphs = {}
+        Node.instances.add(self)
+        Node.num_instances += 1
+        self.counter = Node.num_instances
         self._attach_to_outcoming_nodes()
-
-        with threading.Lock():
-            Node.num_instances += 1
-            self.counter = Node.num_instances
         
         if name is None:
             self.name = f'<{self.__class__.__name__.capitalize()}Operation{self.counter}>'
